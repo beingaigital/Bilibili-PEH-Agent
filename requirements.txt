@@ -1,0 +1,14 @@
+requests>=2.31.0
+rich>=13.0.0
+openai>=1.50.0
+python-dotenv>=1.0.1
+gradio>=5.0.0
+beautifulsoup4>=4.12.3
+pyyaml>=6.0.0
+# DrissionPage 推荐安装，提供更强的反爬能力（已适配 v4.x 语法）
+DrissionPage>=4.0.0
+# bilibili-api-python 推荐安装，内置 WBI 算法和风控对抗（推荐用于 B 站搜索）
+bilibili-api-python>=6.0.0
+# bilibili-api-python 需要异步请求库，推荐使用 httpx
+httpx>=0.24.0
+
