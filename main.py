@@ -136,10 +136,16 @@ def _save_markdown_output(topic: str, final_script, output_dir: str = "output") 
             lines.append(f"- **关键词**：{m.keyword}")
             lines.append(f"- **标题**：{m.title}")
             lines.append(f"- **理由**：{m.reason}")
+            lines.append(f"- **平台**：{m.platform}")
             if m.url:
                 lines.append(f"- **网页链接**：{m.url}")
+            if m.embed_url:
+                lines.append(f"- **嵌入链接**：{m.embed_url}")
             if m.play_url:
                 lines.append(f"- **播放直链**：`{m.play_url}`")
+            if m.animation:
+                anim_name = m.animation.get("name") or m.animation.get("id") or "动画预设"
+                lines.append(f"- **动画**：{anim_name}")
             lines.append("")
 
     with open(path, "w", encoding="utf-8") as f:
@@ -148,7 +154,12 @@ def _save_markdown_output(topic: str, final_script, output_dir: str = "output") 
     return path
 
 
-def run_pipeline_cli(topic: str) -> None:
+def run_pipeline_cli(
+    topic: str,
+    use_proxy: bool | None = None,
+    disable_youtube: bool = False,
+    disable_animations: bool = False,
+) -> None:
     """命令行模式下运行四步流水线。"""
     console.rule("[bold blue]Step 1 - 搜研专家[/bold blue]")
     console.print(f"[bold]输入选题：[/bold]{topic}\n")
@@ -165,77 +176,19 @@ def run_pipeline_cli(topic: str) -> None:
 
     # Step 1.2: 百度百科抓取
     console.print("[yellow]Step 1.2: 百度百科抓取摘要[/yellow]")
-    baike_chunks = []
-    failed_keywords = []
+    # 在新的搜研逻辑下直接调用封装好的 research_topic 便于使用 Google + Wikipedia
+    research = research_topic(topic, use_proxy=use_proxy, debug=True)
+    facts = research.facts
+    outline = research.outline
     
-    # 一次性处理所有关键词（只创建一个浏览器实例，避免资源问题）
-    console.print("  正在批量抓取所有关键词...")
-    all_chunks = _fetch_baike_chunks(keywords, max_pages=len(keywords), debug=True)
-    
-    # 统计成功和失败的关键词
-    for kw in keywords:
-        # 检查是否有该关键词的抓取结果
-        found = any(kw in chunk for chunk in all_chunks)
-        if found:
-            console.print(f"  [green]✓[/green] {kw}")
-            baike_chunks.extend([chunk for chunk in all_chunks if kw in chunk])
-        else:
-            console.print(f"  [dim]✗[/dim] {kw}")
-            failed_keywords.append(kw)
-    
-    if baike_chunks:
-        console.print(f"\n[green]✓[/green] 共成功抓取 {len(baike_chunks)} 条百科摘要：")
-        for idx, chunk in enumerate(baike_chunks, 1):
-            preview = chunk[:100].replace("\n", " ") + "..." if len(chunk) > 100 else chunk
-            console.print(f"  {idx}. {preview}")
-    else:
-        console.print(f"\n[dim]✗[/dim] 所有关键词抓取失败")
-        if failed_keywords:
-            console.print(f"[dim]失败的关键词：{', '.join(failed_keywords)}[/dim]")
-            console.print("[dim]\n💡 调试提示：如需查看详细错误信息，可以在 Python 中运行：[/dim]")
-            console.print("[dim]  from agent_mvp.step1_research import _fetch_baike_chunks[/dim]")
-            console.print(f"[dim]  _fetch_baike_chunks(['{failed_keywords[0]}'], debug=True)[/dim]")
-        console.print("[dim]\n可能原因：[/dim]")
-        console.print("[dim]  1. 关键词在百度百科中不存在（LLM 生成了修饰性短语而非实体名）[/dim]")
-        console.print("[dim]  2. 网络连接问题或超时（请检查网络和代理设置）[/dim]")
-        console.print("[dim]  3. 百度百科反爬虫限制（触发安全验证，可能需要浏览器访问验证）[/dim]")
-        console.print("[dim]  4. 百度百科页面结构变更（选择器失效）[/dim]")
-        console.print("[dim]\n⚠️  注意：由于抓取失败，后续步骤可能无法生成有效内容[/dim]")
-    console.print()
-
-    # Step 1.3: Qwen 脱水成事实清单
-    console.print("[yellow]Step 1.3: Qwen 脱水成事实清单[/yellow]")
-    facts = _distill_facts_with_qwen(topic, baike_chunks, debug=True) if baike_chunks else None
     if facts:
+        console.print(f"\n[green]✓[/green] 维基/搜索抓取成功，进入事实脱水，共 {len(facts)} 条")
         console.print(f"[green]✓[/green] 生成 {len(facts)} 条硬核事实：")
         for fact in facts:
             console.print(f"  - {fact.title}: {fact.summary[:80]}...")
     else:
-        console.print("[dim]✗[/dim] 事实脱水失败")
-        if not baike_chunks:
-            console.print("[dim]原因：没有可用的百科数据（Step 1.2 抓取失败）[/dim]")
-        else:
-            console.print("[dim]原因：Qwen API 调用失败或返回格式错误（详见上方调试信息）[/dim]")
-        facts = []
+        console.print(f"\n[dim]✗[/dim] 抓取或脱水失败，后续内容可能为空")
         console.print("[dim]⚠️  注意：没有事实数据，后续脚本生成可能为空[/dim]")
-    console.print()
-
-    # Step 1.4: 生成动态大纲
-    console.print("[yellow]Step 1.4: Qwen 生成动态大纲[/yellow]")
-    outline = _gen_outline_with_qwen(topic, facts, debug=True) if facts else None
-    if outline:
-        console.print(f"[green]✓[/green] 生成动态大纲（{len(outline)} 个章节）：")
-        for idx, section in enumerate(outline, 1):
-            console.print(f"  {idx}. {section}")
-    else:
-        console.print("[dim]✗[/dim] 大纲生成失败，使用默认模板")
-        outline = [
-            "开场与人物/事件引入",
-            "发家史或早期发展阶段",
-            "关键转折点与黑历史",
-            "当代延续与讽刺意味",
-        ]
-        console.print(f"[dim]使用默认大纲（{len(outline)} 个章节）[/dim]")
     console.print()
 
     # 汇总输出
@@ -276,16 +229,19 @@ def run_pipeline_cli(topic: str) -> None:
         console.print(f"- {p}")
 
     console.rule("[bold blue]Step 3 - 素材匹配[/bold blue]")
-    materials = match_materials(script, debug=True)
+    materials = match_materials(script, use_youtube=not disable_youtube, debug=True)
     for idx, m in enumerate(materials.materials, 1):
         # 构建显示内容
         content_lines = [
             f"[bold]占位符：[/bold]{m.placeholder}",
             f"[bold]关键词：[/bold]{m.keyword}",
+            f"[bold]平台：[/bold]{m.platform}",
             f"[bold]标题：[/bold]{m.title}",
             f"[bold]理由：[/bold]{m.reason}",
             f"[bold]网页链接：[/bold]{m.url}",
         ]
+        if m.embed_url:
+            content_lines.append(f"[bold]嵌入：[/bold]{m.embed_url}")
         
         # 如果有播放直链，显示它
         if m.play_url:
@@ -304,7 +260,13 @@ def run_pipeline_cli(topic: str) -> None:
         )
 
     console.rule("[bold blue]Step 4 - 最终合成[/bold blue]")
-    final_script = compose_final_script(script, materials, enable_safety_filter=True, strict_mode=False)
+    final_script = compose_final_script(
+        script,
+        materials,
+        enable_safety_filter=True,
+        strict_mode=False,
+        enable_animations=not disable_animations,
+    )
     
     # 检查是否有敏感词（用于显示警告信息）
     console.print("[yellow]内容安全检查...[/yellow]")
@@ -419,10 +381,16 @@ def _generate_markdown_content(topic: str, final_script) -> str:
             lines.append(f"- **关键词**：{m.keyword}")
             lines.append(f"- **标题**：{m.title}")
             lines.append(f"- **理由**：{m.reason}")
+            lines.append(f"- **平台**：{m.platform}")
             if m.url:
                 lines.append(f"- **网页链接**：{m.url}")
+            if m.embed_url:
+                lines.append(f"- **嵌入链接**：{m.embed_url}")
             if m.play_url:
                 lines.append(f"- **播放直链**：`{m.play_url}`")
+            if m.animation:
+                anim_name = m.animation.get("name") or m.animation.get("id") or "动画预设"
+                lines.append(f"- **动画**：{anim_name}")
             lines.append("")
 
     return "\n".join(lines)
@@ -437,7 +405,13 @@ def run_pipeline_ui(topic: str) -> tuple[str, str, str | None]:
         research = research_topic(topic.strip())
         script = write_script(research)
         materials = match_materials(script)
-        final_script = compose_final_script(script, materials, enable_safety_filter=True, strict_mode=False)
+        final_script = compose_final_script(
+            script,
+            materials,
+            enable_safety_filter=True,
+            strict_mode=False,
+            enable_animations=True,
+        )
         
         # 检查是否有敏感词（用于显示警告信息）
         all_matches = []
@@ -462,9 +436,12 @@ def run_pipeline_ui(topic: str) -> tuple[str, str, str | None]:
         material_lines: list[str] = []
         for m in final_script.materials:
             material_lines.append(f"占位符：{m.placeholder}")
+            material_lines.append(f"- 平台：{m.platform}")
             material_lines.append(f"- 标题：{m.title}")
             material_lines.append(f"- 理由：{m.reason}")
             material_lines.append(f"- 链接：{m.url}")
+            if m.embed_url:
+                material_lines.append(f"- 嵌入：{m.embed_url}")
             material_lines.append("")
 
         materials_text = "\n".join(material_lines).strip()
@@ -622,11 +599,29 @@ if __name__ == "__main__":
         default="麻生太郎家族发展史：从煤矿财阀到鹰派政客",
         help="选题内容，仅在 cli 模式下使用",
     )
+    parser.add_argument(
+        "--use-proxy",
+        action="store_true",
+        help="强制认为已启用代理，优先 Google 搜索",
+    )
+    parser.add_argument(
+        "--disable-youtube",
+        action="store_true",
+        help="禁用 YouTube 素材扩展，仅使用 B 站",
+    )
+    parser.add_argument(
+        "--disable-animations",
+        action="store_true",
+        help="禁用占位动画提示",
+    )
     args = parser.parse_args()
 
     if args.mode == "web":
         launch_web()
     else:
-        run_pipeline_cli(args.topic)
-
-
+        run_pipeline_cli(
+            args.topic,
+            use_proxy=True if args.use_proxy else None,
+            disable_youtube=args.disable_youtube,
+            disable_animations=args.disable_animations,
+        )

@@ -10,7 +10,8 @@ import json
 from pathlib import Path
 from typing import List, Tuple, Set
 
-from .data_types import ScriptDraft, MaterialMatchResult, FinalScript
+from .data_types import ScriptDraft, MaterialMatchResult, FinalScript, MaterialItem
+from .config import CONFIG
 
 
 # ==================== 内容安全过滤功能 ====================
@@ -20,6 +21,54 @@ def _get_sensitive_words_file() -> Path:
     current_dir = Path(__file__).parent
     project_root = current_dir.parent
     return project_root / "config" / "sensitive_words.json"
+
+
+def _get_animation_manifest_file() -> Path:
+    """获取动画预设清单路径"""
+    base = CONFIG.animation.manifest_path
+    if base.is_absolute():
+        return base
+    current_dir = Path(__file__).parent.parent
+    return current_dir / base
+
+
+def _load_animation_presets() -> List[dict]:
+    """加载动画预设列表"""
+    path = _get_animation_manifest_file()
+    if not path.exists():
+        return []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict) and "presets" in data:
+            presets = data.get("presets", [])
+        elif isinstance(data, list):
+            presets = data
+        else:
+            presets = []
+        if not isinstance(presets, list):
+            return []
+        return presets
+    except Exception:
+        return []
+
+
+def _attach_animation(materials: List[MaterialItem], enable_animations: bool) -> List[MaterialItem]:
+    """为素材附加动画元信息（简单轮询分配）。"""
+    if not enable_animations:
+        return materials
+    presets = _load_animation_presets()
+    if not presets:
+        return materials
+    enriched: List[MaterialItem] = []
+    for idx, m in enumerate(materials):
+        if m.animation:
+            enriched.append(m)
+            continue
+        preset = presets[idx % len(presets)]
+        m.animation = preset if isinstance(preset, dict) else {}
+        enriched.append(m)
+    return enriched
 
 
 def _load_sensitive_words() -> Set[str]:
@@ -217,7 +266,8 @@ def _filter_sensitive_content(final_script: FinalScript,
 
 def compose_final_script(script: ScriptDraft, materials: MaterialMatchResult, 
                          enable_safety_filter: bool = True,
-                         strict_mode: bool = False) -> FinalScript:
+                         strict_mode: bool = False,
+                         enable_animations: bool = True) -> FinalScript:
     """合成最终脚本并自动进行敏感词过滤
     
     Args:
@@ -225,13 +275,17 @@ def compose_final_script(script: ScriptDraft, materials: MaterialMatchResult,
         materials: 素材匹配结果
         enable_safety_filter: 是否启用内容安全过滤（默认 True）
         strict_mode: 严格模式，发现敏感词时是否抛出异常（默认 False，只替换）
+        enable_animations: 是否附加动画提示
     
     Returns:
         过滤后的 FinalScript（如果启用过滤）
     """
+    # 附加动画提示
+    material_items = _attach_animation(materials.materials, enable_animations)
+
     # 先把素材按占位符组织成一个映射，方便渲染
     placeholder_to_materials = {}
-    for m in materials.materials:
+    for m in material_items:
         placeholder_to_materials.setdefault(m.placeholder, []).append(m)
 
     # 拼接正文
@@ -250,7 +304,13 @@ def compose_final_script(script: ScriptDraft, materials: MaterialMatchResult,
                 for m in placeholder_to_materials[stripped]:
                     lines.append(f"  - 推荐素材：{m.title}")
                     lines.append(f"    理由：{m.reason}")
+                    lines.append(f"    平台：{m.platform}")
                     lines.append(f"    链接：{m.url}")
+                    if m.embed_url:
+                        lines.append(f"    嵌入：{m.embed_url}")
+                    if m.animation:
+                        anim_name = m.animation.get("name") or m.animation.get("id") or "推荐动画"
+                        lines.append(f"    动画：{anim_name}")
                 lines.append("")  # 素材后再空一行
             else:
                 lines.append(line)
@@ -264,7 +324,7 @@ def compose_final_script(script: ScriptDraft, materials: MaterialMatchResult,
         topic=script.topic,
         title=script.title,
         content=content,
-        materials=materials.materials,
+        materials=material_items,
     )
     
     # 自动进行内容安全过滤
@@ -293,5 +353,3 @@ def check_sensitive_words(text: str) -> List[Tuple[str, int]]:
         发现的敏感词列表，每个元素为 (敏感词, 出现位置) 的元组
     """
     return _check_sensitive_words(text)
-
-

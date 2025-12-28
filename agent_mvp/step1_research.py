@@ -9,7 +9,8 @@ Step 1: 考据 / 事实脱水
 import json
 import random
 import time
-from typing import List, Optional
+import os
+from typing import Dict, List, Optional
 from urllib.parse import quote
 
 import requests
@@ -43,6 +44,159 @@ def _llm_client() -> Optional["OpenAI"]:
     if not api_key:
         return None
     return OpenAI(api_key=api_key, base_url="https://dashscope.aliyuncs.com/compatible-mode/v1")
+
+
+def _proxy_enabled() -> bool:
+    """判断是否启用了代理（用于决定是否尝试 Google）。"""
+    return bool(
+        os.getenv("https_proxy")
+        or os.getenv("http_proxy")
+        or os.getenv("HTTPS_PROXY")
+        or os.getenv("HTTP_PROXY")
+    )
+
+
+def _get_proxy_dict() -> Optional[Dict[str, str]]:
+    proxies: Dict[str, str] = {}
+    for scheme in ("http", "https"):
+        value = os.getenv(f"{scheme}_proxy") or os.getenv(f"{scheme.upper()}_PROXY")
+        if value:
+            proxies[scheme] = value
+    return proxies or None
+
+
+def _translate_to_zh(text: str, debug: bool = False) -> tuple[str, bool, str]:
+    """将文本翻译成中文（优先使用 LLM，失败则返回原文）。
+    
+    Returns:
+        (translated_text, is_translated, source_lang)
+    """
+    if not text:
+        return "", False, ""
+    client = _llm_client()
+    if client is None:
+        return text, False, ""
+    try:
+        completion = client.chat.completions.create(
+            model=CONFIG.llm.model_research,
+            messages=[
+                {"role": "system", "content": "你是翻译助手，请将输入翻译成流畅的中文，不要添加解释。"},
+                {"role": "user", "content": text[:3000]},
+            ],
+            max_tokens=800,
+            temperature=0.2,
+        )
+        out = completion.choices[0].message.content or ""
+        if out.strip():
+            return out.strip(), True, "en"
+    except Exception as e:
+        if debug:
+            print(f"  ⚠️ 翻译失败：{type(e).__name__}: {str(e)[:80]}")
+    return text, False, ""
+
+
+def _fetch_wikipedia_chunks(keywords: List[str], max_pages: int = 3, debug: bool = False) -> List[Dict[str, str]]:
+    """优先使用维基百科摘要（支持中英，英文可翻译）。"""
+    results: List[Dict[str, str]] = []
+    session = requests.Session()
+    for kw in keywords[:max_pages]:
+        encoded = quote(kw.replace(" ", "_"))
+        page_data = None
+        lang_used = ""
+        for lang in ["zh", "en"]:
+            url = f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{encoded}"
+            try:
+                resp = session.get(url, timeout=10)
+                if resp.status_code != 200:
+                    continue
+                data = resp.json()
+                extract = data.get("extract", "")
+                if not extract or len(extract) < 50:
+                    continue
+                page_data = data
+                lang_used = lang
+                break
+            except Exception as e:
+                if debug:
+                    print(f"  ⚠️ Wikipedia {lang} 摘要获取失败: {str(e)[:80]}")
+                continue
+
+        if not page_data:
+            continue
+
+        summary_text = page_data.get("extract", "")
+        translated = False
+        translated_from = ""
+        if lang_used.startswith("en"):
+            summary_text, translated, translated_from = _translate_to_zh(summary_text, debug=debug)
+
+        page_url = (
+            page_data.get("content_urls", {}).get("desktop", {}).get("page")
+            or f"https://{lang_used or 'zh'}.wikipedia.org/wiki/{encoded}"
+        )
+        results.append(
+            {
+                "text": f"{kw}：{summary_text[:2000]}",
+                "url": page_url,
+                "lang": lang_used or "zh",
+                "translated_from": translated_from if translated else "",
+                "source_site": "wikipedia",
+            }
+        )
+        if debug:
+            print(f"  ✓ Wikipedia 捕获：{kw} ({lang_used}) {len(summary_text)}字")
+    return results
+
+
+def _fetch_google_snippets(keywords: List[str], max_pages: int = 3, debug: bool = False) -> List[str]:
+    """在启用代理的情况下使用 Google 搜索摘要。"""
+    proxies = _get_proxy_dict()
+    if not proxies:
+        return []
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+    }
+    session = requests.Session()
+    session.headers.update(headers)
+    results: List[str] = []
+    for kw in keywords[:max_pages]:
+        try:
+            resp = session.get(
+                "https://www.google.com/search",
+                params={"q": kw, "hl": "zh-CN"},
+                timeout=CONFIG.search.google_timeout,
+                proxies=proxies,
+                allow_redirects=True,
+            )
+            if resp.status_code != 200:
+                if debug:
+                    print(f"  ⚠️ Google 搜索状态码: {resp.status_code}")
+                continue
+            soup = BeautifulSoup(resp.text, "html.parser")
+            # Google 结果列表
+            cards = soup.select("div.g") or soup.select("div.tF2Cxc")
+            snippet_text = ""
+            for card in cards[:3]:
+                title = card.select_one("h3")
+                snippet = card.select_one(".VwiC3b") or card.select_one("span.aCOpRe") or card.select_one("div.IsZvec")
+                if snippet:
+                    text = snippet.get_text(" ", strip=True)
+                    if text and len(text) > 30:
+                        snippet_text = text
+                        break
+                if title and kw in title.get_text():
+                    snippet_text = title.get_text()
+            if snippet_text:
+                results.append(f"{kw}：{snippet_text[:2000]}")
+                if debug:
+                    print(f"  ✅ Google 摘要: {kw} ({len(snippet_text)}字)")
+        except Exception as e:
+            if debug:
+                print(f"  ⚠️ Google 搜索失败: {type(e).__name__}: {str(e)[:80]}")
+            continue
+        time.sleep(random.uniform(0.5, 1.0))
+    return results
 
 
 def _gen_baike_keywords(topic: str) -> Optional[List[str]]:
@@ -674,12 +828,18 @@ def _fetch_baike_chunks(keywords: List[str], max_pages: int = 3, debug: bool = F
 # -------------------------
 # Qwen-plus 脱水成事实清单
 # -------------------------
-def _distill_facts_with_qwen(topic: str, raw_chunks: List[str], debug: bool = False) -> Optional[List[FactItem]]:
+def _distill_facts_with_qwen(
+    topic: str,
+    raw_chunks: List[str],
+    source_hint: Optional[Dict[str, str]] = None,
+    debug: bool = False,
+) -> Optional[List[FactItem]]:
     """使用 Qwen 将百科摘录脱水成硬核事实清单。
     
     Args:
         topic: 主题
         raw_chunks: 原始百科摘录列表
+        source_hint: 来源提示（用于为事实补充来源信息）
         debug: 是否输出调试信息
     
     Returns:
@@ -705,10 +865,11 @@ def _distill_facts_with_qwen(topic: str, raw_chunks: List[str], debug: bool = Fa
     except (FileNotFoundError, ImportError):
         # 回退到硬编码提示词（兼容性）
         prompt_template = (
-            "请基于以下中文百科摘录（可能来自百度百科、Bing 搜索结果等），提取与主题相关的硬核事实。\n"
+            "请基于以下中文资料摘录（可能来自维基百科、百度百科、Google/Bing 摘要等），提取与主题相关的硬核事实。\n"
             "输出格式：JSON 数组，每个元素包含："
-            '{"title": "事实标题", "summary": "事实摘要", "sources": ["来源"]}\n\n'
+            '{"title": "事实标题", "summary": "事实摘要", "sources": ["来源"], "source_site": "wikipedia/baike", "source_engine": "google/bing/baidu", "source_link": "原始链接"}\n\n'
             "要求：\n"
+            "- 优先使用维基百科的内容作为事实依据，如果只有英文内容请输出中文翻译\n"
             "- 优先提取与主题直接相关的事实（人物、事件、时间、地点、关键数据）\n"
             "- 如果摘录内容与主题不完全匹配，请尝试提取其中可能相关的信息，或基于常识补充基本事实\n"
             "- 摘要应包含时间、地点、关键人物/机构等关键信息\n"
@@ -777,6 +938,9 @@ def _distill_facts_with_qwen(topic: str, raw_chunks: List[str], debug: bool = Fa
         
         data = json.loads(content)
         facts: List[FactItem] = []
+        hint_engine = (source_hint or {}).get("engine", "") if source_hint else ""
+        hint_site = (source_hint or {}).get("site", "") if source_hint else ""
+        hint_link = (source_hint or {}).get("link", "") if source_hint else ""
         
         # 处理不同的返回格式
         if isinstance(data, list):
@@ -789,7 +953,17 @@ def _distill_facts_with_qwen(topic: str, raw_chunks: List[str], debug: bool = Fa
                 sources_raw = item.get("sources", []) or []
                 sources = [str(s).strip() for s in sources_raw if str(s).strip()]
                 if title and summary:
-                    facts.append(FactItem(title=title, summary=summary, sources=sources or ["BaiduBaike"]))
+                    facts.append(
+                        FactItem(
+                            title=title,
+                            summary=summary,
+                            sources=sources or ["WIKI/BAIKE"],
+                            source_engine=str(item.get("source_engine", "") or hint_engine),
+                            source_site=str(item.get("source_site", "") or hint_site),
+                            source_link=str(item.get("source_link", "") or hint_link),
+                            translated_from=str(item.get("translated_from", "")),
+                        )
+                    )
         elif isinstance(data, dict):
             # 如果返回的是单个字典，尝试提取
             if "title" in data and "summary" in data:
@@ -798,7 +972,17 @@ def _distill_facts_with_qwen(topic: str, raw_chunks: List[str], debug: bool = Fa
                 sources_raw = data.get("sources", []) or []
                 sources = [str(s).strip() for s in sources_raw if str(s).strip()]
                 if title and summary:
-                    facts.append(FactItem(title=title, summary=summary, sources=sources or ["BaiduBaike"]))
+                    facts.append(
+                        FactItem(
+                            title=title,
+                            summary=summary,
+                            sources=sources or ["WIKI/BAIKE"],
+                            source_engine=str(data.get("source_engine", "") or hint_engine),
+                            source_site=str(data.get("source_site", "") or hint_site),
+                            source_link=str(data.get("source_link", "") or hint_link),
+                            translated_from=str(data.get("translated_from", "")),
+                        )
+                    )
             elif debug:
                 print(f"  ⚠️ 返回的是字典，但格式不符合预期: {list(data.keys())}")
         
@@ -944,7 +1128,7 @@ def _gen_outline_with_qwen(topic: str, facts: List[FactItem], debug: bool = Fals
 # -------------------------
 # 主入口
 # -------------------------
-def research_topic(topic: str) -> ResearchResult:
+def research_topic(topic: str, use_proxy: Optional[bool] = None, debug: bool = False) -> ResearchResult:
     # 默认大纲（如果动态生成失败，使用这个）
     default_outline = [
         "开场与人物/事件引入",
@@ -953,8 +1137,31 @@ def research_topic(topic: str) -> ResearchResult:
         "当代延续与讽刺意味",
     ]
 
+    proxy_on = _proxy_enabled() if use_proxy is None else use_proxy
     keywords = _gen_baike_keywords(topic) or [topic]
-    baike_chunks = _fetch_baike_chunks(keywords)
+
+    # 1) 维基百科优先
+    wiki_blocks = _fetch_wikipedia_chunks(keywords, max_pages=len(keywords), debug=debug) if CONFIG.search.prefer_wikipedia else []
+    wiki_chunks = [b["text"] for b in wiki_blocks]
+
+    # 2) 搜索摘要（Google -> Baidu/Bing）
+    search_chunks: List[str] = []
+    source_hint = {"engine": "google" if proxy_on else "baidu", "site": "", "link": ""}
+
+    if proxy_on:
+        search_chunks = _fetch_google_snippets(keywords, max_pages=len(keywords), debug=debug)
+        if search_chunks:
+            source_hint["engine"] = "google"
+    if not search_chunks:
+        # 无代理或 Google 失败时，走百度/Bing 聚合 + 百科回退
+        search_chunks = _fetch_baike_chunks(keywords, max_pages=len(keywords), debug=debug)
+        source_hint.setdefault("engine", "baidu")
+        if not source_hint.get("site"):
+            source_hint["site"] = "baike"
+        source_hint.setdefault("link", "https://baike.baidu.com")
+
+    # 3) 汇总并去重
+    baike_chunks = wiki_chunks + search_chunks
     
     # 结果去重优化：去除重复的百科摘录，节省 Token
     # 使用 set 去重，但保留顺序（Python 3.7+ dict 保持插入顺序）
@@ -966,7 +1173,12 @@ def research_topic(topic: str) -> ResearchResult:
             unique_chunks.append(chunk)
     baike_chunks = unique_chunks
     
-    facts = _distill_facts_with_qwen(topic, baike_chunks) or []
+    # 如果维基百科有命中，补充来源提示
+    if wiki_blocks and not source_hint.get("site"):
+        source_hint["site"] = "wikipedia"
+        source_hint["link"] = wiki_blocks[0].get("url", "")
+
+    facts = _distill_facts_with_qwen(topic, baike_chunks, source_hint=source_hint, debug=debug) or []
 
     # 根据事实清单动态生成大纲（如果没有事实，使用默认大纲）
     if facts:
@@ -975,5 +1187,3 @@ def research_topic(topic: str) -> ResearchResult:
         outline = default_outline
 
     return ResearchResult(topic=topic, outline=outline, facts=facts)
-
-

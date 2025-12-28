@@ -9,6 +9,10 @@ class FactItem:
     title: str
     summary: str
     sources: List[str] = field(default_factory=list)
+    source_engine: str = ""  # google / bing / baidu 等
+    source_site: str = ""  # wikipedia / baike 等
+    source_link: str = ""
+    translated_from: str = ""  # 如果是翻译文本，记录原始语言
 
 
 @dataclass
@@ -46,8 +50,11 @@ class MaterialItem:
     keyword: str
     title: str
     reason: str
+    platform: str = "bilibili"  # bilibili / youtube / mock
     url: str  # 网页地址
+    embed_url: str = ""  # 便于前端直接嵌入
     play_url: str = ""  # 可播放的直链 URL（mp4/flv），如果为空则回退到网页地址
+    animation: Dict[str, Any] = field(default_factory=dict)
     extra: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -67,6 +74,5 @@ class FinalScript:
     title: str
     content: str
     materials: List[MaterialItem]
-
 
 

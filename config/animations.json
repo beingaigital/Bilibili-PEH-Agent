@@ -1,0 +1,25 @@
+{
+  "presets": [
+    {
+      "id": "intro_glow",
+      "name": "故障闪烁开场",
+      "type": "intro",
+      "asset": "https://assets10.lottiefiles.com/packages/lf20_9GqfM0.json",
+      "duration": 2.2
+    },
+    {
+      "id": "headline_slide",
+      "name": "字幕滑入转场",
+      "type": "transition",
+      "asset": "https://assets10.lottiefiles.com/private_files/lf30_editor_6hKBD3.json",
+      "duration": 1.5
+    },
+    {
+      "id": "map_ping",
+      "name": "地图定位脉冲",
+      "type": "overlay",
+      "asset": "https://assets3.lottiefiles.com/packages/lf20_ydo1amjm.json",
+      "duration": 1.8
+    }
+  ]
+}

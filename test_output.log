@@ -1,0 +1,281 @@
+────────────────────────────── Step 1 - 搜研专家 ───────────────────────────────
+输入选题：高市早苗以及日本右翼思想的根源
+
+Step 1.1: Qwen 拆解关键词
+✓ 生成关键词：高市早苗, 日本右翼, 大日本帝国宪法, 明治维新, 吉田茂, 岸信介, 
+神道政治联盟
+
+Step 1.2: 百度百科抓取摘要
+  ✓ 生成中文关键词: ['高市早苗', '日本右翼', '大日本帝国宪法', '明治维新', '吉田茂', '岸信介', '神道政治联盟']
+  ✓ 生成英文关键词: ['Takagi Sanae', 'Japanese right-wing', 'Imperial Constitution of Japan', 'Meiji Restoration', 'Yoshida Shigeru', 'Nobusuke Kishi', 'Shinto political alliance']
+  ✓ 合并后关键词（中英文）: ['高市早苗', '日本右翼', '大日本帝国宪法', '明治维新', '吉田茂', '岸信介', '神道政治联盟', 'Takagi Sanae', 'Japanese right-wing', 'Imperial Constitution of Japan', 'Meiji Restoration', 'Yoshida Shigeru', 'Nobusuke Kishi', 'Shinto political alliance']
+  ⚠️ Wikipedia search 状态码: 403
+  ⚠️ Wikipedia search 状态码: 403
+  ⚠️ Wikipedia search 状态码: 403
+  ⚠️ Wikipedia search 状态码: 403
+  ⚠️ Wikipedia search 状态码: 403
+  ⚠️ Wikipedia search 状态码: 403
+  ⚠️ Wikipedia search 状态码: 403
+  ⚠️ Wikipedia search 状态码: 403
+  ⚠️ Wikipedia search 状态码: 403
+  ⚠️ Wikipedia search 状态码: 403
+  ⚠️ Wikipedia search 状态码: 403
+  ⚠️ Wikipedia search 状态码: 403
+  ⚠️ Wikipedia search 状态码: 403
+  ⚠️ Wikipedia search 状态码: 403
+  📌 尝试 Google 搜索方案，关键词: ['高市早苗', '日本右翼', '大日本帝国宪法', '明治维新', '吉田茂', '岸信介', '神道政治联盟', 'Takagi Sanae', 'Japanese right-wing', 'Imperial Constitution of Japan', 'Meiji Restoration', 'Yoshida Shigeru', 'Nobusuke Kishi', 'Shinto political alliance']
+  📌 尝试 Bing 搜索聚合方案（推荐，最快最轻量）...
+--- 开始抓取（Bing 搜索聚合），关键词: ['高市早苗', '日本右翼', '大日本帝国宪法', '明治维新', '吉田茂', '岸信介', '神道政治联盟', 'Takagi Sanae', 'Japanese right-wing', 'Imperial Constitution of Japan', 'Meiji Restoration', 'Yoshida Shigeru', 'Nobusuke Kishi', 'Shinto political alliance'] ---
+  ✓ 检测到可用域名: https://www.bing.com
+  正在搜索: 高市早苗 -> "高市早苗" 百度百科
+  正在搜索: 高市早苗 -> 高市早苗 百度百科
+  正在搜索: 高市早苗 -> "高市早苗"
+  ✅ 获取成功 (64字，精确匹配)
+  正在搜索: 日本右翼 -> "日本右翼" 百度百科
+  正在搜索: 日本右翼 -> 日本右翼 百度百科
+  正在搜索: 日本右翼 -> "日本右翼"
+  ✅ 获取成功 (96字，精确匹配)
+  正在搜索: 大日本帝国宪法 -> "大日本帝国宪法" 百度百科
+  正在搜索: 大日本帝国宪法 -> 大日本帝国宪法 百度百科
+  正在搜索: 大日本帝国宪法 -> "大日本帝国宪法"
+  正在搜索: 大日本帝国宪法 -> 大日本帝国宪法 简介
+  ❌ 未找到有效摘要
+  正在搜索: 明治维新 -> "明治维新" 百度百科
+  正在搜索: 明治维新 -> 明治维新 百度百科
+  正在搜索: 明治维新 -> "明治维新"
+  ✅ 获取成功 (99字，精确匹配)
+  正在搜索: 吉田茂 -> "吉田茂" 百度百科
+  ✅ 获取成功 (47字，精确匹配)
+  正在搜索: 岸信介 -> "岸信介" 百度百科
+  正在搜索: 岸信介 -> 岸信介 百度百科
+  正在搜索: 岸信介 -> "岸信介"
+  正在搜索: 岸信介 -> 岸信介 简介
+  ❌ 未找到有效摘要
+  正在搜索: 神道政治联盟 -> "神道政治联盟" 百度百科
+  正在搜索: 神道政治联盟 -> 神道政治联盟 百度百科
+  正在搜索: 神道政治联盟 -> "神道政治联盟"
+  正在搜索: 神道政治联盟 -> 神道政治联盟 简介
+  ❌ 未找到有效摘要
+  正在搜索: Takagi Sanae -> "Takagi Sanae" 百度百科
+  正在搜索: Takagi Sanae -> Takagi Sanae 百度百科
+  正在搜索: Takagi Sanae -> "Takagi Sanae"
+  正在搜索: Takagi Sanae -> Takagi Sanae 简介
+  ❌ 未找到有效摘要
+  正在搜索: Japanese right-wing -> "Japanese right-wing" 百度百科
+  正在搜索: Japanese right-wing -> Japanese right-wing 百度百科
+  正在搜索: Japanese right-wing -> "Japanese right-wing"
+  正在搜索: Japanese right-wing -> Japanese right-wing 简介
+  ❌ 未找到有效摘要
+  正在搜索: Imperial Constitution of Japan -> "Imperial Constitution of Japan" 百度百科
+  正在搜索: Imperial Constitution of Japan -> Imperial Constitution of Japan 百度百科
+  正在搜索: Imperial Constitution of Japan -> "Imperial Constitution of Japan"
+  正在搜索: Imperial Constitution of Japan -> Imperial Constitution of Japan 简介
+  ❌ 未找到有效摘要
+  正在搜索: Meiji Restoration -> "Meiji Restoration" 百度百科
+  正在搜索: Meiji Restoration -> Meiji Restoration 百度百科
+  正在搜索: Meiji Restoration -> "Meiji Restoration"
+  正在搜索: Meiji Restoration -> Meiji Restoration 简介
+  ❌ 未找到有效摘要
+  正在搜索: Yoshida Shigeru -> "Yoshida Shigeru" 百度百科
+  正在搜索: Yoshida Shigeru -> Yoshida Shigeru 百度百科
+  正在搜索: Yoshida Shigeru -> "Yoshida Shigeru"
+  正在搜索: Yoshida Shigeru -> Yoshida Shigeru 简介
+  ❌ 未找到有效摘要
+  正在搜索: Nobusuke Kishi -> "Nobusuke Kishi" 百度百科
+  正在搜索: Nobusuke Kishi -> Nobusuke Kishi 百度百科
+  正在搜索: Nobusuke Kishi -> "Nobusuke Kishi"
+  正在搜索: Nobusuke Kishi -> Nobusuke Kishi 简介
+  ❌ 未找到有效摘要
+  正在搜索: Shinto political alliance -> "Shinto political alliance" 百度百科
+  正在搜索: Shinto political alliance -> Shinto political alliance 百度百科
+  正在搜索: Shinto political alliance -> "Shinto political alliance"
+  正在搜索: Shinto political alliance -> Shinto political alliance 简介
+  ❌ 未找到有效摘要
+  📤 调用 Qwen API (模型: qwen-plus)...
+  📥 API 返回内容长度: 576 字符
+  📥 原始内容预览: [
+  {
+    "title": "高市早苗引发中国游客抵制日本事件",
+    "summary": "2025年11月21日，因日本政治人物高市早苗的相关言论或政策举动，导致超过50万名中国游客取消原定赴日行程，对日本旅游业和经济造成显著影响。",
+    "sources": [
+      "百度百科、Bing 搜索结果等中文百科摘录"
+    ]
+  },
+  {
+    "title": "日本右翼势力歪曲历史的政治动机",
+    "summary": "日本右翼势力与保守政治团体关系密切，常通过否认或美化侵略历史以维护自身政治利益和影响力，这种行为根植于战前军国主义残余和战...
+  🔍 提取后的 JSON 内容: [
+  {
+    "title": "高市早苗引发中国游客抵制日本事件",
+    "summary": "2025年11月21日，因日本政治人物高市早苗的相关言论或政策举动，导致超过50万名中国游客取消原定赴日行程，对日本旅游业和经济造成显著影响。",
+    "sources": [
+      "百度百科、Bing 搜索结果等中文百科摘录"
+    ]
+  },
+  {
+    "title": "日本右翼势力歪曲历史的政治动机",
+    "summary": "日本右翼势力与保守政治团体关系密切，常通过否认或美化侵略历史以维护自身政治利益和影响力，这种行为根植于战前军国主义残余和战...
+  ✅ 成功提取 3 条事实
+
+✓ 维基/搜索抓取成功，进入事实脱水，共 3 条
+✓ 生成 3 条硬核事实：
+  - 高市早苗引发中国游客抵制日本事件: 
+2025年11月21日，因日本政治人物高市早苗的相关言论或政策举动，导致超过50万名中国游
+客取消原定赴日行程，对日本旅游业和经济造成显著影响。...
+  - 日本右翼势力歪曲历史的政治动机: 
+日本右翼势力与保守政治团体关系密切，常通过否认或美化侵略历史以维护自身政治利益和
+影响力，这种行为根植于战前军国主义残余和战后未彻底清算的历史背景。...
+  - 明治维新奠定中央集权与国家 militarism 基础: 
+1871年，明治新政府实施废藩置县，解散约300个封建藩国，将军事与税收权集中于中央，
+建立统一军队‘御亲兵’，为近代日本中央集权和军国主义发展奠定制度基础。...
+
+─────────────────────────────── Step 1 汇总输出 ────────────────────────────────
+主题：高市早苗以及日本右翼思想的根源
+大纲：开场：高市早苗与抵制风波 / 根源：明治集权与军国基因 / 
+传承：右翼思想的历史脉络 / 崛起：保守派的政治进阶 / 转折：历史否认的政坛博弈 / 
+影响：中日关系的深层裂痕 / 反思：未清算的帝国幽灵
+
+硬核事实清单（共 3 条）
+  - 高市早苗引发中国游客抵制日本事件: 
+2025年11月21日，因日本政治人物高市早苗的相关言论或政策举动，导致超过50万名中国游
+客取消原定赴日行程，对日本旅游业和经济造成显著影响。
+  - 日本右翼势力歪曲历史的政治动机: 
+日本右翼势力与保守政治团体关系密切，常通过否认或美化侵略历史以维护自身政治利益和
+影响力，这种行为根植于战前军国主义残余和战后未彻底清算的历史背景。
+  - 明治维新奠定中央集权与国家 militarism 基础: 
+1871年，明治新政府实施废藩置县，解散约300个封建藩国，将军事与税收权集中于中央，
+建立统一军队‘御亲兵’，为近代日本中央集权和军国主义发展奠定制度基础。
+────────────────────────────── Step 2 - 金牌编剧 ───────────────────────────────
+  📤 调用 Qwen API 生成脚本 (模型: qwen-plus)...
+  ❌ Qwen API 调用失败: BadRequestError: Error code: 400 - {'error': {'message': 'Output data may contain inappropriate content. For details, see: https://help.aliyun.com/zh/model-studio/error-code#inappropriate-content', 'type': 'data_inspe
+  ⚠️ Qwen API 调用失败，回退到本地模板
+  ℹ️ 使用生成的标题: 「高市早苗以及日本右翼思想的根源」：深度解析
+标题候选：「高市早苗以及日本右翼思想的根源」：深度解析
+
+脚本结构预览：
+#开场
+#第 1 部分：高市早苗引发中国游客抵制日本事件
+#第 2 部分：日本右翼势力歪曲历史的政治动机
+#第 3 部分：明治维新奠定中央集权与国家 militarism 基础
+#结尾
+
+📝 完整脚本内容：
+
+【开场】
+  各位观众老爷们好，今天咱们来聊聊「高市早苗以及日本右翼思想的根源」。
+  别看标题听着严肃，实际上这背后既有资本操作，又有历史阴影，还能顺带吐槽一下当代
+政客的迷之发言。
+
+【第 1 部分：高市早苗引发中国游客抵制日本事件】
+  2025年11月21日，因日本政治人物高市早苗的相关言论或政策举动，导致超过50万名中国
+游客取消原定赴日行程，对日本旅游业和经济造成显著影响。
+
+  这里如果按 B 站口味展开，大概会是：先用一两句梗点把观众抓住，
+  接着用时间线串起关键事件，中间穿插一两句阴阳怪气，最后再来个升华小结。
+
+  [素材占位：与本段内容相关的历史纪录片或新闻画面]
+
+【第 2 部分：日本右翼势力歪曲历史的政治动机】
+  日本右翼势力与保守政治团体关系密切，常通过否认或美化侵略历史以维护自身政治利益
+和影响力，这种行为根植于战前军国主义残余和战后未彻底清算的历史背景。
+
+  这里如果按 B 站口味展开，大概会是：先用一两句梗点把观众抓住，
+  接着用时间线串起关键事件，中间穿插一两句阴阳怪气，最后再来个升华小结。
+
+  [素材占位：与本段内容相关的历史纪录片或新闻画面]
+
+【第 3 部分：明治维新奠定中央集权与国家 militarism 基础】
+  1871年，明治新政府实施废藩置县，解散约300个封建藩国，将军事与税收权集中于中央
+，建立统一军队‘御亲兵’，为近代日本中央集权和军国主义发展奠定制度基础。
+
+  这里如果按 B 站口味展开，大概会是：先用一两句梗点把观众抓住，
+  接着用时间线串起关键事件，中间穿插一两句阴阳怪气，最后再来个升华小结。
+
+  [素材占位：与本段内容相关的历史纪录片或新闻画面]
+
+【结尾】
+  好了，以上就是本期关于这段历史的“硬核八卦”。
+  如果你看完觉得有点后背发凉，那说明这段历史离我们并不遥远——
+  历史从来不是博物馆里的展品，而是会在当下政经新闻里，悄悄换个马甲继续出现。
+
+  [素材占位：主角近期相关发言或新闻片段]
+
+
+检测到的素材占位符：
+- [素材占位：与本段内容相关的历史纪录片或新闻画面]
+- [素材占位：主角近期相关发言或新闻片段]
+────────────────────────────── Step 3 - 素材匹配 ───────────────────────────────
+🚀 开始素材匹配，共 2 个占位符
+🔧 运行模式: 已配置 SESSDATA (稳定)
+
+🔍 [1/2] 处理: [素材占位：与本段内容相关的历史纪录片或新闻画面]
+    🤖 使用 Qwen-plus 提取关键词...
+    ✅ LLM 提取关键词: 历史 纪录片 新闻
+    ⚠️ 搜索 API 异常: ClientConnectorCertificateError: Cannot connect to host api.bilibili.com:443 ssl:True [SSLCertVerificationError: (1, '[SSL: CERTIFICA
+    🔄 缩短关键词重试: 历史 纪
+    ⚠️ 搜索 API 异常: ClientConnectorCertificateError: Cannot connect to host api.bilibili.com:443 ssl:True [SSLCertVerificationError: (1, '[SSL: CERTIFICA
+    ⚠️ YouTube API 搜索异常: ConnectTimeout: HTTPSConnectionPool(host='www.googleapis.com', port=443): Max retries exceeded with url: /youtube/v3
+    ❌ 搜索无结果，跳过（不使用模拟数据）
+  等待 1.50 秒（限频）...
+
+🔍 [2/2] 处理: [素材占位：主角近期相关发言或新闻片段]
+    🤖 使用 Qwen-plus 提取关键词...
+    ✅ LLM 提取关键词: 主角 发言 新闻
+    ⚠️ 搜索 API 异常: ClientConnectorCertificateError: Cannot connect to host api.bilibili.com:443 ssl:True [SSLCertVerificationError: (1, '[SSL: CERTIFICA
+    🔄 缩短关键词重试: 主角 发
+    ⚠️ 搜索 API 异常: ClientConnectorCertificateError: Cannot connect to host api.bilibili.com:443 ssl:True [SSLCertVerificationError: (1, '[SSL: CERTIFICA
+    ⚠️ YouTube API 搜索异常: ConnectTimeout: HTTPSConnectionPool(host='www.googleapis.com', port=443): Max retries exceeded with url: /youtube/v3
+    ❌ 搜索无结果，跳过（不使用模拟数据）
+────────────────────────────── Step 4 - 最终合成 ───────────────────────────────
+内容安全检查...
+✓ 内容安全检查通过
+
+╭──────────────────────────────── 成品脚本文本 ────────────────────────────────╮
+│ 【标题】「高市早苗以及日本右翼思想的根源」：深度解析                         │
+│                                                                              │
+│ 【正文】                                                                     │
+│                                                                              │
+│ —— 开场 ——                                                                   │
+│ 各位观众老爷们好，今天咱们来聊聊「高市早苗以及日本右翼思想的根源」。         │
+│ 别看标题听着严肃，实际上这背后既有资本操作，又有历史阴影，还能顺带吐槽一下当 │
+│ 代政客的迷之发言。                                                           │
+│                                                                              │
+│ —— 第 1 部分：高市早苗引发中国游客抵制日本事件 ——                            │
+│ 2025年11月21日，因日本政治人物高市早苗的相关言论或政策举动，导致超过50万名中 │
+│ 国游客取消原定赴日行程，对日本旅游业和经济造成显著影响。                     │
+│                                                                              │
+│ 这里如果按 B 站口味展开，大概会是：先用一两句梗点把观众抓住，                │
+│ 接着用时间线串起关键事件，中间穿插一两句阴阳怪气，最后再来个升华小结。       │
+│                                                                              │
+│ [素材占位：与本段内容相关的历史纪录片或新闻画面]                             │
+│                                                                              │
+│ —— 第 2 部分：日本右翼势力歪曲历史的政治动机 ——                              │
+│ 日本右翼势力与保守政治团体关系密切，常通过否认或美化侵略历史以维护自身政治利 │
+│ 益和影响力，这种行为根植于战前军国主义残余和战后未彻底清算的历史背景。       │
+│                                                                              │
+│ 这里如果按 B 站口味展开，大概会是：先用一两句梗点把观众抓住，                │
+│ 接着用时间线串起关键事件，中间穿插一两句阴阳怪气，最后再来个升华小结。       │
+│                                                                              │
+│ [素材占位：与本段内容相关的历史纪录片或新闻画面]                             │
+│                                                                              │
+│ —— 第 3 部分：明治维新奠定中央集权与国家 militarism 基础 ——                  │
+│ 1871年，明治新政府实施废藩置县，解散约300个封建藩国，将军事与税收权集中于中  │
+│ 央，建立统一军队‘御亲兵’，为近代日本中央集权和军国主义发展奠定制度基础。     │
+│                                                                              │
+│ 这里如果按 B 站口味展开，大概会是：先用一两句梗点把观众抓住，                │
+│ 接着用时间线串起关键事件，中间穿插一两句阴阳怪气，最后再来个升华小结。       │
+│                                                                              │
+│ [素材占位：与本段内容相关的历史纪录片或新闻画面]                             │
+│                                                                              │
+│ —— 结尾 ——                                                                   │
+│ 好了，以上就是本期关于这段历史的“硬核八卦”。                                 │
+│ 如果你看完觉得有点后背发凉，那说明这段历史离我们并不遥远——                   │
+│ 历史从来不是博物馆里的展品，而是会在当下政经新闻里，悄悄换个马甲继续出现。   │
+│                                                                              │
+│ [素材占位：主角近期相关发言或新闻片段]                                       │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+✓ 已保存为 Markdown 
+文件：output/20251223_201342_高市早苗以及日本右翼思想的根源.md
+

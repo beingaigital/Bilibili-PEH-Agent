@@ -30,6 +30,15 @@ from .data_types import ScriptDraft, MaterialItem, MaterialMatchResult
 from .config import CONFIG
 from .prompt_loader import load_prompt_user, load_prompt_system, format_prompt
 
+# 可选的 YouTube 搜索爬虫
+try:
+    from youtubesearchpython import VideosSearch  # type: ignore
+
+    _HAS_YOUTUBE_SCRAPER = True
+except Exception:
+    VideosSearch = None  # type: ignore
+    _HAS_YOUTUBE_SCRAPER = False
+
 # 尝试导入 OpenAI（用于调用 Qwen-plus）
 try:
     from openai import OpenAI  # type: ignore
@@ -63,6 +72,8 @@ except Exception as e:
     print("   2. Python 环境是否正确（可能有多个 Python 环境）")
     print("   3. 库版本是否兼容（建议 >=6.0.0）")
 
+import requests
+
 
 def _sync_run(coro):
     """同步运行异步函数的辅助函数"""
@@ -86,6 +97,7 @@ SCK = os.getenv("BILIBILI_BUVID3", "")  # 可选，buvid3
 
 # 初始化凭证（如果提供了 SESSDATA）
 credential = Credential(sessdata=SESSDATA, buvid3=SCK) if (_HAS_BILIBILI_API and SESSDATA) else None
+YOUTUBE_API_KEY = CONFIG.youtube.api_key
 
 
 # ================= 核心工具函数 =================
@@ -345,9 +357,128 @@ def _search_bilibili_safe(keyword: str, max_results: int = 1, debug: bool = Fals
         return []
 
 
+def _search_youtube_api(keyword: str, max_results: int = 1, debug: bool = False) -> List[dict]:
+    """使用 YouTube Data API v3 搜索视频（需要 YOUTUBE_API_KEY）。"""
+    if not YOUTUBE_API_KEY:
+        return []
+    if not keyword:
+        return []
+    try:
+        search_resp = requests.get(
+            "https://www.googleapis.com/youtube/v3/search",
+            params={
+                "part": "snippet",
+                "type": "video",
+                "q": keyword,
+                "maxResults": max_results,
+                "order": "relevance",
+                "key": YOUTUBE_API_KEY,
+            },
+            timeout=10,
+        )
+        if search_resp.status_code != 200:
+            if debug:
+                print(f"    ⚠️ YouTube API 状态码: {search_resp.status_code}")
+            return []
+        data = search_resp.json()
+        items = data.get("items", []) or []
+        if not items:
+            return []
+
+        video_ids = [item["id"]["videoId"] for item in items if item.get("id", {}).get("videoId")]
+        stats_map = {}
+        if video_ids:
+            stats_resp = requests.get(
+                "https://www.googleapis.com/youtube/v3/videos",
+                params={
+                    "part": "statistics",
+                    "id": ",".join(video_ids),
+                    "key": YOUTUBE_API_KEY,
+                },
+                timeout=10,
+            )
+            if stats_resp.status_code == 200:
+                stats_data = stats_resp.json().get("items", []) or []
+                for stat_item in stats_data:
+                    vid = stat_item.get("id")
+                    view_count = int(stat_item.get("statistics", {}).get("viewCount", "0") or 0)
+                    stats_map[vid] = view_count
+
+        results = []
+        for item in items[:max_results]:
+            vid = item.get("id", {}).get("videoId")
+            snippet = item.get("snippet", {}) or {}
+            if not vid:
+                continue
+            title = snippet.get("title", "YouTube 视频")
+            channel = snippet.get("channelTitle", "")
+            url = f"https://www.youtube.com/watch?v={vid}"
+            embed_url = f"https://www.youtube.com/embed/{vid}"
+            view_count = stats_map.get(vid, 0)
+            results.append(
+                {
+                    "video_id": vid,
+                    "title": title,
+                    "channel": channel,
+                    "view": view_count,
+                    "url": url,
+                    "embed_url": embed_url,
+                }
+            )
+        if debug and results:
+            print(f"    ✓ YouTube API 返回 {len(results)} 条结果")
+        return results
+    except Exception as e:
+        if debug:
+            print(f"    ⚠️ YouTube API 搜索异常: {type(e).__name__}: {str(e)[:100]}")
+        return []
+
+
+def _search_youtube_scrape(keyword: str, max_results: int = 1, debug: bool = False) -> List[dict]:
+    """无 API Key 的情况下用轻量库抓取 YouTube 搜索结果。"""
+    if not _HAS_YOUTUBE_SCRAPER:
+        return []
+    try:
+        searcher = VideosSearch(keyword, limit=max_results)
+        res = searcher.result()
+        items = res.get("result", []) or []
+        results = []
+        for item in items[:max_results]:
+            vid = item.get("id")
+            if not vid:
+                continue
+            title = item.get("title", "YouTube 视频")
+            channel = item.get("channel", {}).get("name", "")
+            view_str = item.get("viewCount", {}).get("text", "0")
+            # 解析播放量
+            try:
+                view_count = int(view_str.replace(",", "").replace("次观看", "").replace("views", "").strip())
+            except Exception:
+                view_count = 0
+            url = item.get("link") or f"https://www.youtube.com/watch?v={vid}"
+            embed_url = f"https://www.youtube.com/embed/{vid}"
+            results.append(
+                {
+                    "video_id": vid,
+                    "title": title,
+                    "channel": channel,
+                    "view": view_count,
+                    "url": url,
+                    "embed_url": embed_url,
+                }
+            )
+        if debug and results:
+            print(f"    ✓ YouTube 爬虫返回 {len(results)} 条结果")
+        return results
+    except Exception as e:
+        if debug:
+            print(f"    ⚠️ YouTube 爬虫异常: {type(e).__name__}: {str(e)[:100]}")
+        return []
+
+
 # ================= 主逻辑 =================
 
-def match_materials(script: ScriptDraft, debug: bool = False) -> MaterialMatchResult:
+def match_materials(script: ScriptDraft, use_youtube: bool = True, debug: bool = False) -> MaterialMatchResult:
     """重构后的匹配主流程
     
     策略：
@@ -360,6 +491,7 @@ def match_materials(script: ScriptDraft, debug: bool = False) -> MaterialMatchRe
     Args:
         script: 脚本草稿
         debug: 是否输出调试信息
+    6. 可选同时搜索 YouTube 并择优返回
     """
     if not _HAS_BILIBILI_API:
         print("❌ 错误：bilibili-api-python 未安装")
@@ -379,10 +511,11 @@ def match_materials(script: ScriptDraft, debug: bool = False) -> MaterialMatchRe
         
         # 使用 LLM 提取关键词（优先），失败则降级到简单提取
         keyword = _extract_keywords(placeholder, debug=debug)
-        found_video = None
-        play_url = ""
         
-        # 1. 尝试搜索
+        bili_candidate: Optional[MaterialItem] = None
+        yt_candidate: Optional[MaterialItem] = None
+
+        # 1. 尝试 B 站搜索
         search_res = _search_bilibili_safe(keyword, max_results=1, debug=debug)
         
         # 2. 如果没搜到，尝试拆词（简单拆分前半部分）
@@ -392,57 +525,87 @@ def match_materials(script: ScriptDraft, debug: bool = False) -> MaterialMatchRe
                 print(f"    🔄 缩短关键词重试: {short_keyword}")
             search_res = _search_bilibili_safe(short_keyword, max_results=1, debug=debug)
             
-        # 3. 处理结果
         if search_res:
             top_video = search_res[0]
-            # 安全获取视频信息
             video_title = top_video.get('title', '未知标题')
             video_author = top_video.get('author', '未知UP主')
             if debug: 
                 print(f"    ✅ 命中视频: {video_title[:30]}... (UP: {video_author})")
             
-            # 获取直链（必须获取，否则返回的链接不可用）
             bvid = top_video.get('bvid', '')
             play_url = ""
             if bvid:
                 if debug:
                     print(f"    正在获取播放直链: {bvid}")
                 play_url = _get_play_url_safe(bvid, debug=debug)
-                if play_url:
-                    if debug:
-                        print(f"    ✅ 成功获取播放直链")
-                else:
-                    if debug:
-                        print(f"    ⚠️ 未能获取播放直链，将使用网页链接")
-            else:
-                if debug:
-                    print(f"    ⚠️ 视频没有 bvid，无法获取播放直链")
-            
-            # 构建推荐理由
-            reason_parts = [f"匹配度高"]
+                if play_url and debug:
+                    print(f"    ✅ 成功获取播放直链")
             play_count = top_video.get('play', 0)
+            reason_parts = ["匹配度高", "平台：B站"]
             if play_count > 0:
                 play_str = f"{play_count:,}" if play_count < 10000 else f"{play_count/10000:.1f}万"
                 reason_parts.append(f"播放量 {play_str}")
             if play_url:
-                reason_parts.append("已获取播放直链（可直接播放）")
-            else:
-                reason_parts.append("播放直链获取失败（使用网页链接）")
-            
-            materials.append(MaterialItem(
+                reason_parts.append("已获取播放直链")
+            bili_candidate = MaterialItem(
                 placeholder=placeholder,
                 keyword=keyword,
                 title=video_title,
                 reason="，".join(reason_parts) + "，可作为画面支撑。",
+                platform="bilibili",
                 url=f"https://www.bilibili.com/video/{bvid}" if bvid else "",
                 play_url=play_url,
+                embed_url="",
                 extra={
                     "bvid": bvid,
                     "play": play_count,
                     "author": video_author,
                     "mock": False
                 }
-            ))
+            )
+
+        # 2+. YouTube 备用/扩展
+        if use_youtube:
+            yt_res = _search_youtube_api(keyword, max_results=1, debug=debug) or _search_youtube_scrape(keyword, max_results=1, debug=debug)
+            if yt_res:
+                yt_top = yt_res[0]
+                view_count = yt_top.get("view", 0)
+                yt_reason_parts = ["匹配度高", "平台：YouTube"]
+                if view_count:
+                    view_str = f"{view_count:,}" if view_count < 10000 else f"{view_count/10000:.1f}万"
+                    yt_reason_parts.append(f"播放量 {view_str}")
+                yt_candidate = MaterialItem(
+                    placeholder=placeholder,
+                    keyword=keyword,
+                    title=yt_top.get("title", "YouTube 视频"),
+                    reason="，".join(yt_reason_parts) + "，可作为补充画面。",
+                    platform="youtube",
+                    url=yt_top.get("url", ""),
+                    play_url=yt_top.get("embed_url", ""),
+                    embed_url=yt_top.get("embed_url", ""),
+                    extra={
+                        "video_id": yt_top.get("video_id", ""),
+                        "channel": yt_top.get("channel", ""),
+                        "view": view_count,
+                        "mock": False,
+                    }
+                )
+
+        # 3. 择优选择
+        chosen: Optional[MaterialItem] = None
+        if bili_candidate and yt_candidate:
+            # 对比播放量，视为简单的热度指标
+            bili_play = int(bili_candidate.extra.get("play", 0) or 0)
+            yt_play = int(yt_candidate.extra.get("view", 0) or 0)
+            chosen = yt_candidate if yt_play > bili_play else bili_candidate
+            if debug:
+                picked = "YouTube" if chosen == yt_candidate else "B站"
+                print(f"    🎯 优选平台：{picked}")
+        else:
+            chosen = bili_candidate or yt_candidate
+
+        if chosen:
+            materials.append(chosen)
         else:
             # 4. 彻底失败 -> 降级 Mock
             if debug: 
@@ -454,8 +617,10 @@ def match_materials(script: ScriptDraft, debug: bool = False) -> MaterialMatchRe
                 keyword=keyword,
                 title=f"未找到素材: {keyword}",
                 reason="搜索无结果或被风控",
+                platform="mock",
                 url=f"https://www.bilibili.com/video/{bv_code}",
                 play_url="",
+                embed_url="",
                 extra={"mock": True}
             ))
 
